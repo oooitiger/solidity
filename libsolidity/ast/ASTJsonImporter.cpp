@@ -116,7 +116,7 @@ ASTPointer<ASTNode> ASTJsonImporter::convertJsonToASTNode(Json::Value const& _js
 	if (nodeType == "ContractDefinition")
 		return createContractDefinition(_json);
 	if (nodeType == "IdentifierPath")
-		return createIdentifier(_json);
+		return createIdentifierPath(_json);
 	if (nodeType == "InheritanceSpecifier")
 		return createInheritanceSpecifier(_json);
 	if (nodeType == "UsingForDirective")
@@ -311,10 +311,7 @@ ASTPointer<IdentifierPath> ASTJsonImporter::createIdentifierPath(Json::Value con
 	boost::algorithm::split(strs, nameString, boost::is_any_of("."));
 	for (string s: strs)
 		namePath.emplace_back(s);
-	return createASTNode<IdentifierPath>(
-		_node,
-		namePath
-	);
+	return createASTNode<IdentifierPath>(_node, namePath);
 }
 
 ASTPointer<InheritanceSpecifier> ASTJsonImporter::createInheritanceSpecifier(Json::Value const& _node)
@@ -324,7 +321,7 @@ ASTPointer<InheritanceSpecifier> ASTJsonImporter::createInheritanceSpecifier(Jso
 		arguments.push_back(convertJsonToASTNode<Expression>(arg));
 	return createASTNode<InheritanceSpecifier>(
 		_node,
-		createUserDefinedTypeName(member(_node, "baseName")),
+		createIdentifierPath(member(_node, "baseName")),
 		member(_node, "arguments").isNull() ? nullptr : make_unique<std::vector<ASTPointer<Expression>>>(arguments)
 	);
 }
@@ -333,7 +330,7 @@ ASTPointer<UsingForDirective> ASTJsonImporter::createUsingForDirective(Json::Val
 {
 	return createASTNode<UsingForDirective>(
 		_node,
-		createUserDefinedTypeName(member(_node, "libraryName")),
+		createIdentifierPath(member(_node, "libraryName")),
 		_node["typeName"].isNull() ? nullptr  : convertJsonToASTNode<TypeName>(_node["typeName"])
 	);
 }
@@ -383,10 +380,10 @@ ASTPointer<ParameterList> ASTJsonImporter::createParameterList(Json::Value const
 
 ASTPointer<OverrideSpecifier> ASTJsonImporter::createOverrideSpecifier(Json::Value const&  _node)
 {
-	std::vector<ASTPointer<UserDefinedTypeName>> overrides;
+	std::vector<ASTPointer<IdentifierPath>> overrides;
 
 	for (auto& param: _node["overrides"])
-		overrides.push_back(createUserDefinedTypeName(param));
+		overrides.push_back(createIdentifierPath(param));
 
 	return createASTNode<OverrideSpecifier>(
 		_node,
@@ -499,7 +496,7 @@ ASTPointer<ModifierInvocation> ASTJsonImporter::createModifierInvocation(Json::V
 		arguments.push_back(convertJsonToASTNode<Expression>(arg));
 	return createASTNode<ModifierInvocation>(
 		_node,
-		createIdentifier(member(_node, "modifierName")),
+		createIdentifierPath(member(_node, "modifierName")),
 		member(_node, "arguments").isNull() ? nullptr : make_unique<std::vector<ASTPointer<Expression>>>(arguments)
 	);
 }

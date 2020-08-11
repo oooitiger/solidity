@@ -3,8 +3,14 @@
 Breaking Changes:
  * Type System: Unary negation can only be used on signed integers, not on unsigned integers.
 
+
 Compiler Features:
  * SMTChecker: Support ``addmod`` and ``mulmod``.
+
+
+Language Features:
+ * Super constructors can now be called using the member notation e.g.  ``M.C(123)``.
+ * New AST Node ``IdentifierPath`` replacing in many places the ``UserDefinedTypeName``
 
 ### 0.7.3 (unreleased)
 
