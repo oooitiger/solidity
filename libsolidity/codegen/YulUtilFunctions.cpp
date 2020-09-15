@@ -635,6 +635,122 @@ string YulUtilFunctions::overflowCheckedIntExpFunction(
 	});
 }
 
+string YulUtilFunctions::overflowCheckedIntLiteralExpFunction(
+	RationalNumberType const& _baseType,
+	IntegerType const& _exponentType,
+	IntegerType const& _commonType
+)
+{
+	solAssert(!_exponentType.isSigned(), "");
+	solAssert(_baseType.isNegative() == _commonType.isSigned(), "");
+	solAssert(_commonType.numBits() == 256, "");
+
+	// Calculates the upperbound for exponentiation, that is, calculate `b`, such that
+	// _base**b <= _maxValue and _base**(b + 1) > _maxValue
+	auto findExponentUpperbound = [](bigint const _base, bigint const _maxValue) -> unsigned
+	{
+		unsigned first = 0;
+		unsigned last = 255;
+		unsigned middle;
+
+		while (first < last)
+		{
+			middle = (first + last) / 2;
+
+			if (
+				// The condition on msb is a shortcut that avoids computing large powers in
+				// arbitrary precision.
+				boost::multiprecision::msb(_base) * middle <= boost::multiprecision::msb(_maxValue) &&
+				boost::multiprecision::pow(_base, middle) <= _maxValue
+			)
+			{
+				if (boost::multiprecision::pow(_base, middle + 1) > _maxValue)
+					return middle;
+				else
+					first = middle + 1;
+			}
+			else
+				last = middle;
+		}
+
+		return last;
+	};
+
+	// Converts a bigint number into u256 (negative numbers represented in two's complement form.)
+	// We assume that `_v` fits in 256 bits.
+	auto bigint2u = [&](bigint const& _v) -> u256
+	{
+		if (_v < 0)
+			return s2u(s256(_v));
+		return u256(_v);
+	};
+
+	string functionName = "checked_exp_" + _baseType.richIdentifier() + "_" + _exponentType.identifier();
+	bigint baseValue = _baseType.isNegative() ?
+		u2s(_baseType.literalValue(nullptr)) :
+		_baseType.literalValue(nullptr);
+	unsigned exponentUpperbound;
+
+	// Bases 0, 1 and -1. There is no overflow or underflow. The optimizer can simplify the `exp`
+	// for these cases.
+	if (baseValue == 0 || baseValue == 1 || baseValue == -1)
+		return m_functionCollector.createFunction(functionName, [&]() {
+			return Whiskers(R"(
+				function <functionName>(exponent) -> power {
+					exponent := <exponentCleanupFunction>(exponent)
+					power := exp(<base>, exponent)
+				}
+				)")
+				("functionName", functionName)
+				("base", bigint2u(baseValue).str())
+				("exponentCleanupFunction", cleanupFunction(_exponentType))
+				.render();
+		});
+
+	if (_baseType.isNegative())
+	{
+		// Only checks for underflow. The only case where this can be a problem is when, for a
+		// negative base, say `b`, and an even exponent, say `e`, `b**e = 2**255` (which is an
+		// overflow.) But this never happens because, `255 = 3*5*17`, and therefore there is no even
+		// number `e` such that `b**e = 2**255`.
+		exponentUpperbound = findExponentUpperbound(abs(baseValue), abs(_commonType.minValue()));
+
+		bigint power = boost::multiprecision::pow(baseValue, exponentUpperbound);
+		bigint overflowedPower = boost::multiprecision::pow(baseValue, exponentUpperbound + 1);
+
+		solAssert(
+			(power <= _commonType.maxValue()) && (power >= _commonType.minValue()) &&
+			!((overflowedPower <= _commonType.maxValue()) && (overflowedPower >= _commonType.minValue())),
+			"Incorrect exponent upper bound calculated."
+		);
+	}
+	else
+	{
+		exponentUpperbound = findExponentUpperbound(baseValue, _commonType.maxValue());
+
+		solAssert(
+			boost::multiprecision::pow(baseValue, exponentUpperbound) <= _commonType.maxValue() &&
+			boost::multiprecision::pow(baseValue, exponentUpperbound + 1) > _commonType.maxValue(),
+			"Incorrect exponent upper bound calculated."
+		);
+	}
+
+	return m_functionCollector.createFunction(functionName, [&]() {
+		return Whiskers(R"(
+			function <functionName>(exponent) -> power {
+				exponent := <exponentCleanupFunction>(exponent)
+				if gt(exponent, <exponentUpperbound>) { <panic>() }
+				power := exp(<base>, exponent)
+			}
+			)")("functionName", functionName)
+			("exponentCleanupFunction", cleanupFunction(_exponentType))
+			("exponentUpperbound", to_string(exponentUpperbound))
+			("panic", panicFunction())
+			("base", bigint2u(baseValue).str())
+			.render();
+	});
+}
+
 string YulUtilFunctions::overflowCheckedUnsignedExpFunction()
 {
 	// Checks for the "small number specialization" below.
