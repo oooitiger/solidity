@@ -20,6 +20,7 @@ Bugfixes:
  * Code generator: Fix internal error on stripping dynamic types from return parameters on EVM versions without ``RETURNDATACOPY``.
  * Type Checker: Disallow ``virtual`` for modifiers in libraries.
  * Type Checker: Correct the warning for homonymous, but not shadowing declarations.
+ * Type Checker: Add missing checks for calls using types incompatible with ABIEncoderV1 in modules where ABIEncoderV2 is not enabled.
  * ViewPureChecker: Prevent visibility check on constructors.
  * Type system: Fix internal error on implicit conversion of contract instance to the type of its ``super``.
  * Type system: Fix internal error on implicit conversion of string literal to a calldata string.
