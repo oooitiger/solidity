@@ -2,7 +2,7 @@
 pragma solidity >=0.0;
 contract test {
     struct S {
-        uint x;
+        function() returns (uint256) x;
     }
     S str;
     constructor() {
