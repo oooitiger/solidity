@@ -33,8 +33,11 @@ string MultiUseYulFunctionCollector::requestedFunctions()
 {
 	string result;
 	for (auto const& f: m_requestedFunctions)
+	{
+		solAssert(f.second != "STUB", "");
 		// std::map guarantees ascending order when iterating through its keys.
 		result += f.second;
+	}
 	m_requestedFunctions.clear();
 	return result;
 }
@@ -43,6 +46,7 @@ string MultiUseYulFunctionCollector::createFunction(string const& _name, functio
 {
 	if (!m_requestedFunctions.count(_name))
 	{
+		m_requestedFunctions[_name] = "STUB";
 		string fun = _creator();
 		solAssert(!fun.empty(), "");
 		solAssert(fun.find("function " + _name) != string::npos, "Function not properly named.");
