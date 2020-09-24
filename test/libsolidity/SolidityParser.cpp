@@ -543,7 +543,8 @@ BOOST_AUTO_TEST_CASE(keyword_is_reserved)
 		"supports",
 		"switch",
 		"typedef",
-		"typeof"
+		"typeof",
+		"var"
 	};
 
 	BOOST_CHECK_EQUAL(std::size(keywords), static_cast<int>(Token::Var) - static_cast<int>(Token::After) + 1);
