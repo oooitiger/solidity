@@ -59,7 +59,7 @@ bool DocStringTagParser::visit(FunctionDefinition const& _function)
 
 bool DocStringTagParser::visit(VariableDeclaration const& _variable)
 {
-	if (_variable.isStateVariable())
+	if (_variable.isStateVariable() || _variable.isFileLevelVariable())
 	{
 		static set<string> const validPublicTags = set<string>{"dev", "notice", "return", "inheritdoc"};
 		static set<string> const validNonPublicTags = set<string>{"dev", "inheritdoc"};

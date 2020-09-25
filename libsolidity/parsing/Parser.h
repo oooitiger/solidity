@@ -155,6 +155,9 @@ private:
 	///@{
 	///@name Helper functions
 
+	/// @return true if we are at the start of a variable declaration.
+	bool variableDeclarationStart();
+
 	/// Used as return value of @see peekStatementType.
 	enum class LookAheadInfo
 	{
