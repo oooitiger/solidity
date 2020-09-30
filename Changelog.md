@@ -2,6 +2,7 @@
 
 Breaking Changes:
  * Type System: Unary negation can only be used on signed integers, not on unsigned integers.
+ * Code Generator: All arithmetic is checked by default. These checks can be disabled using ``unchecked { ... }``.
 
 Compiler Features:
  * SMTChecker: Support ``addmod`` and ``mulmod``.
